@@ -35,6 +35,7 @@ static void led_init(gpio_t gpio);
 static void led_animation_run(struct boot_context *ctx);
 static bool bootstrap_requested(struct boot_context *ctx);
 static bool get_boot_addr(uint32_t *addr);
+static void clear_slots();
 
 
 // TODO: Add support to cheri mode
@@ -53,6 +54,7 @@ int main(void)
     timer_enable_write(boot_ctx.timer, true);
     if (bootstrap_requested(&boot_ctx)) {
         uprintf(boot_ctx.console, "Entering SPI bootstrap\n");
+        clear_slots(); // if a binary is loaded into slot 1, we don't want slot 0 to boot.
         // Spin polling the spi_dev and processing incoming data until a reset command is received.
         spi_boot_strap(&boot_ctx);
     }
@@ -75,6 +77,14 @@ void boot(uintptr_t addr)
     typedef void (*reset_handler_t)(void);
     reset_handler_t reset = (reset_handler_t)addr;
     reset();
+}
+
+void clear_slots()
+{
+    for (size_t i = 0; i < ARRAY_LEN(boot_slots); i++) {
+        uintptr_t slot = boot_slots[i];
+        DEV_WRITE(slot, 0x00);
+    }
 }
 
 bool get_boot_addr(uint32_t *addr)
