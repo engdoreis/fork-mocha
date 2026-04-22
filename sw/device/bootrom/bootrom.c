@@ -24,10 +24,6 @@ struct boot_context {
     timer_t timer;
 };
 
-// These are defined by the linker script.
-extern uint8_t _program_start[];
-extern uint8_t _program_end[];
-
 static bool spi_boot_strap(struct boot_context *ctx);
 static void page_program(uart_t console, spi_device_t spid, uint32_t offset, uint32_t bytes);
 static void boot(uintptr_t addr);
@@ -136,11 +132,6 @@ bool spi_boot_strap(struct boot_context *ctx)
     return true;
 }
 
-static inline bool is_overriding_me(uintptr_t addr)
-{
-    return addr >= (uintptr_t)_program_start && addr < (uintptr_t)_program_end;
-}
-
 void page_program(uart_t console, spi_device_t spid, uint32_t offset, uint32_t bytes)
 {
     uintptr_t ptr = offset;
@@ -151,12 +142,7 @@ void page_program(uart_t console, spi_device_t spid, uint32_t offset, uint32_t b
         return;
     }
 
-    // TODO: Now only SRAM is supported, but when 4 bytes addressing is enabled and the HW supports
-    // DRAM and ROM, then we need to check that the offset is valid within a memory address space.
-    if (is_overriding_me(ptr) || is_overriding_me(ptr + bytes)) {
-        uprintf(console, "\nPlease don't override the bootROM.");
-        return;
-    }
+    // TODO: Check that the offset is valid within a memory address space.
 
     while (payload_offset < bytes) {
         *((volatile uint64_t *)ptr) = spi_device_flash_payload_buffer_read64(spid, payload_offset);

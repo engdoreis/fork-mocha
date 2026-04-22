@@ -18,10 +18,18 @@ macro(mocha_add_executable_artefacts NAME)
         TARGET ${NAME} POST_BUILD
         COMMAND ${CMAKE_OBJDUMP} ${OBJDUMP_FLAGS} "$<TARGET_FILE:${NAME}>"
                 > "$<TARGET_FILE:${NAME}>.dump"
-        COMMAND ${CMAKE_OBJCOPY} -O binary "$<TARGET_FILE:${NAME}>"
-                "$<TARGET_FILE:${NAME}>.bin"
-        COMMAND srec_cat "$<TARGET_FILE:${NAME}>.bin" -binary -byte-swap 8
-                -o "$<TARGET_FILE:${NAME}>.vmem" -vmem 64
+        COMMAND ${CMAKE_OBJCOPY} -O binary
+          -R .bss -R .stack  # already excluded (NOBITS), but for clarity
+          --only-section=.init_vectors
+          --only-section=.text
+          --only-section=.rodata
+          --only-section=__cap_relocs
+          --only-section=.data   # LMA is in ROM, objcopy uses LMA when --only-section forces i
+          --only-section=.got
+          "$<TARGET_FILE:${NAME}>"
+          "$<TARGET_FILE:${NAME}>.bin"
+        COMMAND srec_cat "$<TARGET_FILE:${NAME}>.bin" -binary -byte-swap 4
+                -o "$<TARGET_FILE:${NAME}>.vmem" -vmem 32
         VERBATIM
     )
 
@@ -29,6 +37,7 @@ macro(mocha_add_executable_artefacts NAME)
     install(FILES "$<TARGET_FILE:${NAME}>.vmem" DESTINATION . COMPONENT ${NAME})
     install(FILES "$<TARGET_FILE:${NAME}>.bin" DESTINATION . COMPONENT ${NAME})
 endmacro()
+
 
 # for a given executable, add a test that runs the executable
 # in the Verilator simulation.

@@ -8,8 +8,7 @@ target_link_libraries(${NAME} hal_vanilla runtime_vanilla startup_vanilla)
 target_compile_options(${NAME} PUBLIC ${VANILLA_FLAGS})
 target_link_options(${NAME} PUBLIC 
   "-nodefaultlibs"
-  "-Wl,--defsym,BOOT_ROM_OFFSET=0x00"
-  "-T${LDS}"
+  "-T${LDS_DIR}/rom.ld"
   "-L${LDS_DIR}"
 )
 install(TARGETS ${NAME})
