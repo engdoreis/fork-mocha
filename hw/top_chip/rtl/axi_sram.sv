@@ -29,6 +29,7 @@ module axi_sram #(
   logic [    top_pkg::AxiAddrWidth-1:0] sram_addr;
   logic [    top_pkg::AxiDataWidth-1:0] sram_wdata;
   logic                                 sram_rvalid;
+  logic                                 sram_was_write;
   logic [    top_pkg::AxiDataWidth-1:0] sram_rdata;
   logic [                AddrWidth-1:0] sram_word_addr;
   logic [    top_pkg::AxiDataWidth-1:0] sram_wmask;
@@ -77,7 +78,7 @@ module axi_sram #(
     .mem_we_o        (sram_we),
     .mem_cheri_tag_o (sram_cheri_w_tag),
     .mem_rvalid_i    (sram_rvalid),
-    .mem_rdata_i     (sram_rdata),
+    .mem_rdata_i     (sram_was_write ? '0 : sram_rdata),
     .mem_cheri_tag_i (sram_cheri_r_tag)
   );
 
@@ -145,8 +146,13 @@ module axi_sram #(
 
   // Single-cycle read response.
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) sram_rvalid <= '0;
-    else         sram_rvalid <= sram_req; // Generate rvalid strobes even for writes
+    if (!rst_ni) begin
+      sram_rvalid    <= '0;
+      sram_was_write <= '0;
+    end else begin
+      sram_rvalid    <= sram_req; // Generate rvalid strobes even for writes
+      sram_was_write <= sram_we;
+    end
   end
 
 endmodule
